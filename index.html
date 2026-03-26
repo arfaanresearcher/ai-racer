@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Racer - Racing Game</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen active">
+            <div class="start-bg"></div>
+            <div class="start-content">
+                <h1 class="game-title">
+                    <span class="title-ai">AI</span>
+                    <span class="title-racer">RACER</span>
+                </h1>
+                <p class="tagline">Outrun the machines</p>
+
+                <div class="menu-options">
+                    <div class="difficulty-select">
+                        <label>DIFFICULTY</label>
+                        <div class="diff-buttons">
+                            <button class="diff-btn" data-diff="easy">EASY</button>
+                            <button class="diff-btn active" data-diff="medium">MEDIUM</button>
+                            <button class="diff-btn" data-diff="hard">HARD</button>
+                        </div>
+                    </div>
+
+                    <div class="track-select">
+                        <label>TRACK</label>
+                        <div class="track-buttons">
+                            <button class="track-btn active" data-track="city">CITY NIGHT</button>
+                            <button class="track-btn" data-track="desert">DESERT</button>
+                            <button class="track-btn" data-track="neon">NEON</button>
+                        </div>
+                    </div>
+
+                    <div class="car-select">
+                        <label>YOUR CAR</label>
+                        <div class="car-buttons">
+                            <button class="car-btn active" data-car="speed">🏎️ SPEED</button>
+                            <button class="car-btn" data-car="balanced">🚗 BALANCED</button>
+                            <button class="car-btn" data-car="tank">🚙 TANK</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="start-btn" class="glow-btn">
+                    <span>START RACE</span>
+                    <div class="btn-glow"></div>
+                </button>
+
+                <div class="controls-hint">
+                    <p>🎮 Arrow Keys / WASD to drive &nbsp;|&nbsp; SPACE to boost &nbsp;|&nbsp; P to pause</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <canvas id="gameCanvas"></canvas>
+
+            <!-- HUD -->
+            <div id="hud">
+                <div class="hud-left">
+                    <div class="hud-item">
+                        <span class="hud-label">LAP</span>
+                        <span id="hud-lap" class="hud-value">1/3</span>
+                    </div>
+                    <div class="hud-item">
+                        <span class="hud-label">POS</span>
+                        <span id="hud-position" class="hud-value">1st</span>
+                    </div>
+                    <div class="hud-item">
+                        <span class="hud-label">TIME</span>
+                        <span id="hud-time" class="hud-value">0:00.0</span>
+                    </div>
+                </div>
+                <div class="hud-center">
+                    <div class="speedometer">
+                        <span id="hud-speed" class="speed-value">0</span>
+                        <span class="speed-unit">KM/H</span>
+                    </div>
+                </div>
+                <div class="hud-right">
+                    <div class="hud-item">
+                        <span class="hud-label">BEST LAP</span>
+                        <span id="hud-best" class="hud-value">--:--</span>
+                    </div>
+                    <div class="boost-container">
+                        <span class="hud-label">BOOST</span>
+                        <div class="boost-bar">
+                            <div id="boost-fill" class="boost-fill"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Countdown -->
+            <div id="countdown" class="hidden">
+                <span id="countdown-text">3</span>
+            </div>
+
+            <!-- Lap notification -->
+            <div id="lap-notification" class="hidden">
+                <span id="lap-text">LAP 2</span>
+            </div>
+
+            <!-- Pause overlay -->
+            <div id="pause-overlay" class="hidden">
+                <h2>PAUSED</h2>
+                <p>Press P to resume</p>
+                <button id="pause-quit-btn" class="menu-btn">QUIT TO MENU</button>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="results-screen" class="screen">
+            <div class="results-content">
+                <h2 id="results-title">RACE COMPLETE!</h2>
+                <div class="results-grid">
+                    <div class="result-item">
+                        <span class="result-label">POSITION</span>
+                        <span id="result-position" class="result-value big">1st</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">TOTAL TIME</span>
+                        <span id="result-time" class="result-value">0:00.0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">BEST LAP</span>
+                        <span id="result-best" class="result-value">0:00.0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">TOP SPEED</span>
+                        <span id="result-speed" class="result-value">0 km/h</span>
+                    </div>
+                </div>
+                <div class="results-actions">
+                    <button id="restart-btn" class="glow-btn">RACE AGAIN</button>
+                    <button id="menu-btn" class="menu-btn">MAIN MENU</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
