@@ -70,6 +70,7 @@
 
     let segments = [];
     let totalLength = 0;
+    let trackBounds = null;
     let player = {};
     let keys = {};
     let aiCars = [];
@@ -184,41 +185,172 @@
     function easeOut(a, b, c) { return c * (1 - a / b); }
     function easeInOut(a, b, c) { return c * ((-Math.cos(a / b * Math.PI) / 2) + 0.5); }
 
+    // Track specification (per project guidelines)
+    const TRACK_SPEC = {
+        OUTER_W: 104,        // outer width in track units
+        OUTER_H: 68,         // outer height in track units
+        CORNER_R: 14,        // corner radius in track units (quarter-circle)
+        LANE_W: 12,          // lane width in track units
+        UNIT_SEGS: 8,        // segments per track unit (resolution)
+        CORNER_CURVE: 3.2,   // per-segment curve magnitude on corners
+    };
+
     function buildTrack() {
         segments = [];
-        // Starting straight
-        addRoad(10, 50, 10, 0, 0);
-        // Gentle right curve
-        addRoad(20, 40, 20, 2, 0);
-        // Hill up
-        addRoad(15, 30, 15, 0, 1500);
-        // Sharp left + downhill
-        addRoad(15, 40, 15, -4, -1500);
-        // S-curves
-        addRoad(15, 30, 15, 3, 500);
-        addRoad(15, 30, 15, -3, -500);
-        // Long straight
-        addRoad(10, 60, 10, 0, 0);
-        // Tight right
-        addRoad(20, 30, 20, 5, 800);
-        // Down straight
-        addRoad(10, 40, 10, -1, -800);
-        // Chicane
-        addRoad(10, 20, 10, 6, 0);
-        addRoad(10, 20, 10, -6, 0);
-        // Gentle left
-        addRoad(20, 40, 20, -2, 500);
-        // Big hill
-        addRoad(15, 40, 15, 1, 2000);
-        // Descent
-        addRoad(15, 40, 15, -1, -2000);
-        // Final straight
-        addRoad(10, 50, 10, 0, 0);
+
+        const { OUTER_W, OUTER_H, CORNER_R, LANE_W, UNIT_SEGS, CORNER_CURVE } = TRACK_SPEC;
+
+        // Centerline geometry (where the car drives - middle of the 12-unit lane)
+        // Long straights: OUTER_W - 2*CORNER_R = 76 units
+        // Short straights: OUTER_H - 2*CORNER_R = 40 units
+        // Corner arc (centerline radius = CORNER_R - LANE_W/2 = 8 units): π*8/2 ≈ 12.57 units
+        const straightLong = OUTER_W - 2 * CORNER_R;
+        const straightShort = OUTER_H - 2 * CORNER_R;
+        const clCornerR = CORNER_R - LANE_W / 2;
+        const cornerArcLen = (Math.PI * clCornerR) / 2;
+
+        const longSegs = Math.round(straightLong * UNIT_SEGS);   // 76*8 = 608
+        const shortSegs = Math.round(straightShort * UNIT_SEGS); // 40*8 = 320
+        const cornerSegs = Math.round(cornerArcLen * UNIT_SEGS); // 12.57*8 ≈ 101
+
+        // Build the track going clockwise from midpoint of top straight, heading east.
+        // Sequence: half-long | C1 | short | C2 | long | C3 | short | C4 | half-long
+        const halfLong = Math.floor(longSegs / 2);
+        const remainLong = longSegs - halfLong;
+
+        const build = [
+            { n: halfLong,    curve: 0 },
+            { n: cornerSegs,  curve: CORNER_CURVE }, // top-right
+            { n: shortSegs,   curve: 0 },
+            { n: cornerSegs,  curve: CORNER_CURVE }, // bottom-right
+            { n: longSegs,    curve: 0 },
+            { n: cornerSegs,  curve: CORNER_CURVE }, // bottom-left
+            { n: shortSegs,   curve: 0 },
+            { n: cornerSegs,  curve: CORNER_CURVE }, // top-left
+            { n: remainLong,  curve: 0 },
+        ];
+
+        for (const part of build) {
+            for (let i = 0; i < part.n; i++) addSegment(part.curve, 0);
+        }
 
         totalLength = segments.length * SEG_LENGTH;
 
+        // Compute 2D world positions for each segment (for minimap)
+        compute2DPath();
+
         // Add scenery
         addScenery();
+    }
+
+    // Walk segments computing 2D world (x, y) for minimap rendering.
+    // The centerline path is a rounded-rect loop with outer 104x68, corner radius 14, lane 12.
+    // Start point: midpoint of top straight, heading east (+x). Direction: clockwise.
+    function compute2DPath() {
+        const { OUTER_W, OUTER_H, CORNER_R, LANE_W } = TRACK_SPEC;
+        const clCornerR = CORNER_R - LANE_W / 2;           // 8 (centerline corner radius)
+        const straightLong = OUTER_W - 2 * CORNER_R;        // 76
+        const straightShort = OUTER_H - 2 * CORNER_R;       // 40
+        const cornerArcLen = (Math.PI * clCornerR) / 2;     // ~12.57
+
+        // Total centerline perimeter:
+        const perim = 2 * straightLong + 2 * straightShort + 4 * cornerArcLen;
+
+        // Track centerline boundaries (centered at origin):
+        const xR = OUTER_W / 2 - LANE_W / 2;   // 46 (right straight x)
+        const xL = -xR;                         // -46 (left straight x)
+        const yT = OUTER_H / 2 - LANE_W / 2;   // 28 (top straight y)
+        const yB = -yT;                         // -28 (bottom straight y)
+        // Corner centers:
+        const ccx = OUTER_W / 2 - CORNER_R;    // 38
+        const ccy = OUTER_H / 2 - CORNER_R;    // 20
+
+        // Cumulative arc-length boundaries for the 9-part sequence:
+        // [half-top, C1 top-right, short-right, C2 bottom-right, long-bottom, C3 bottom-left, short-left, C4 top-left, half-top]
+        const b = [];
+        b.push(straightLong / 2);                          // end of first half of top straight
+        b.push(b[b.length - 1] + cornerArcLen);            // end of top-right corner
+        b.push(b[b.length - 1] + straightShort);           // end of right straight
+        b.push(b[b.length - 1] + cornerArcLen);            // end of bottom-right corner
+        b.push(b[b.length - 1] + straightLong);            // end of bottom straight
+        b.push(b[b.length - 1] + cornerArcLen);            // end of bottom-left corner
+        b.push(b[b.length - 1] + straightShort);           // end of left straight
+        b.push(b[b.length - 1] + cornerArcLen);            // end of top-left corner
+        b.push(b[b.length - 1] + straightLong / 2);        // end of second half of top straight
+
+        const posAt = (d) => {
+            // d = distance along centerline from start point
+            d = ((d % perim) + perim) % perim;
+            let x = 0, y = 0, heading = 0; // heading: 0=east, -π/2=south, π=west, π/2=north
+
+            if (d < b[0]) {
+                // First half of top straight, heading east
+                x = d; y = yT; heading = 0;
+            } else if (d < b[1]) {
+                // Top-right corner: center (38, 20), arc from angle π/2 (north from center) to 0 (east)
+                const t = (d - b[0]) / cornerArcLen;
+                const ang = Math.PI / 2 - t * (Math.PI / 2); // π/2 down to 0 (CW sweep)
+                x = ccx + clCornerR * Math.cos(ang);
+                y = ccy + clCornerR * Math.sin(ang);
+                heading = -t * (Math.PI / 2); // starts 0, ends -π/2 (south)
+            } else if (d < b[2]) {
+                // Right straight, heading south (-y)
+                const t = d - b[1];
+                x = xR; y = ccy - t; heading = -Math.PI / 2;
+            } else if (d < b[3]) {
+                // Bottom-right corner: center (38, -20), arc from east (0) to south (-π/2)
+                const t = (d - b[2]) / cornerArcLen;
+                const ang = 0 - t * (Math.PI / 2); // 0 down to -π/2
+                x = ccx + clCornerR * Math.cos(ang);
+                y = -ccy + clCornerR * Math.sin(ang);
+                heading = -Math.PI / 2 - t * (Math.PI / 2); // -π/2 to -π
+            } else if (d < b[4]) {
+                // Bottom straight, heading west
+                const t = d - b[3];
+                x = ccx - t; y = yB; heading = -Math.PI;
+            } else if (d < b[5]) {
+                // Bottom-left corner: center (-38, -20)
+                const t = (d - b[4]) / cornerArcLen;
+                const ang = -Math.PI / 2 - t * (Math.PI / 2); // -π/2 to -π (south to west)
+                x = -ccx + clCornerR * Math.cos(ang);
+                y = -ccy + clCornerR * Math.sin(ang);
+                heading = -Math.PI - t * (Math.PI / 2); // -π to -3π/2 (= π/2)
+            } else if (d < b[6]) {
+                // Left straight, heading north
+                const t = d - b[5];
+                x = xL; y = -ccy + t; heading = Math.PI / 2;
+            } else if (d < b[7]) {
+                // Top-left corner: center (-38, 20)
+                const t = (d - b[6]) / cornerArcLen;
+                const ang = Math.PI - t * (Math.PI / 2); // π (west) to π/2 (north)
+                x = -ccx + clCornerR * Math.cos(ang);
+                y = ccy + clCornerR * Math.sin(ang);
+                heading = Math.PI / 2 - t * (Math.PI / 2); // π/2 to 0 (north to east)
+            } else {
+                // Second half of top straight, heading east
+                const t = d - b[7];
+                x = -ccx + t; y = yT; heading = 0;
+            }
+            return { x, y, heading };
+        };
+
+        // Sample each segment at its midpoint
+        for (let i = 0; i < segments.length; i++) {
+            const frac = (i + 0.5) / segments.length;
+            const pos = posAt(frac * perim);
+            segments[i].worldX = pos.x;
+            segments[i].worldY = pos.y;
+            segments[i].heading = pos.heading;
+        }
+
+        // Cache track bounds for minimap
+        trackBounds = {
+            minX: -OUTER_W / 2, maxX: OUTER_W / 2,
+            minY: -OUTER_H / 2, maxY: OUTER_H / 2,
+            outerW: OUTER_W, outerH: OUTER_H,
+            cornerR: CORNER_R, laneW: LANE_W,
+            xR: xR, yT: yT, ccx: ccx, ccy: ccy,
+        };
     }
 
     function addScenery() {
@@ -609,6 +741,9 @@
         // Particles on top
         drawParticles();
 
+        // Minimap (top-right)
+        drawMinimap();
+
         // Speed lines
         if (player.speed > player.maxSpd * 0.7) {
             const alpha = ((player.speed / player.maxSpd) - 0.7) / 0.3 * 0.25;
@@ -866,6 +1001,219 @@
             ctx.fill();
         }
         ctx.globalAlpha = 1;
+    }
+
+    // ===== MINIMAP =====
+    function drawMinimap() {
+        if (!trackBounds) return;
+        const mmSize = Math.min(200, Math.floor(W * 0.22));
+        const mmH = Math.floor(mmSize * (trackBounds.outerH / trackBounds.outerW) + 40);
+        const mmX = W - mmSize - 16;
+        const mmY = 90; // below HUD
+        const pad = 12;
+
+        // Background panel
+        ctx.save();
+        ctx.fillStyle = 'rgba(5, 10, 25, 0.75)';
+        ctx.strokeStyle = 'rgba(0, 212, 255, 0.45)';
+        ctx.lineWidth = 1.5;
+        roundedRect(ctx, mmX, mmY, mmSize, mmH, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        // Title label
+        ctx.fillStyle = 'rgba(0, 212, 255, 0.85)';
+        ctx.font = "bold 10px 'Orbitron', sans-serif";
+        ctx.textAlign = 'left';
+        ctx.fillText('TRACK MAP', mmX + 10, mmY + 16);
+        // Dimensions subtitle
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.font = "9px 'Rajdhani', sans-serif";
+        ctx.textAlign = 'right';
+        ctx.fillText('104 × 68 · R14 · LANE 12', mmX + mmSize - 10, mmY + 16);
+
+        // Inner viewport for track drawing
+        const vx = mmX + pad;
+        const vy = mmY + 26;
+        const vw = mmSize - pad * 2;
+        const vh = mmH - 26 - pad;
+
+        // Scale so the track fits
+        const sx = vw / trackBounds.outerW;
+        const sy = vh / trackBounds.outerH;
+        const scale = Math.min(sx, sy);
+        const cx = vx + vw / 2; // minimap center
+        const cy = vy + vh / 2;
+
+        // Transform function: world (x,y) → screen (sx,sy)
+        // Note: world +y is north (up); screen +y is down, so flip y.
+        const W2S = (wx, wy) => ({
+            x: cx + wx * scale,
+            y: cy - wy * scale,
+        });
+
+        // Draw the track as a filled rounded-rect band
+        const { outerW, outerH, cornerR, laneW } = trackBounds;
+        const outerHalfW = outerW / 2;
+        const outerHalfH = outerH / 2;
+        const innerHalfW = outerHalfW - laneW;
+        const innerHalfH = outerHalfH - laneW;
+        const outerR = cornerR;
+        const innerR = Math.max(0, cornerR - laneW);
+
+        // Outer rounded-rect (track edge)
+        ctx.fillStyle = 'rgba(120, 140, 180, 0.35)';
+        ctx.beginPath();
+        pathRoundedRect(ctx, -outerHalfW, -outerHalfH, outerW, outerH, outerR, W2S);
+        ctx.fill();
+
+        // Inner rounded-rect (cut out the middle)
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        pathRoundedRect(ctx, -innerHalfW, -innerHalfH, innerHalfW * 2, innerHalfH * 2, innerR, W2S);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+
+        // Track centerline
+        ctx.strokeStyle = 'rgba(0, 212, 255, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        const clHalfW = outerHalfW - laneW / 2;
+        const clHalfH = outerHalfH - laneW / 2;
+        const clR = cornerR - laneW / 2;
+        pathRoundedRect(ctx, -clHalfW, -clHalfH, clHalfW * 2, clHalfH * 2, clR, W2S);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Start/finish line marker (at midpoint of top straight, heading east)
+        const startP = W2S(0, clHalfH);
+        ctx.strokeStyle = '#ffbe00';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(startP.x, startP.y - laneW * scale / 2);
+        ctx.lineTo(startP.x, startP.y + laneW * scale / 2);
+        ctx.stroke();
+
+        // AI car markers
+        for (const ai of aiCars) {
+            const seg = segments[findSegment(ai.z) % segments.length];
+            if (!seg || seg.worldX == null) continue;
+            const p = W2S(seg.worldX, seg.worldY);
+            ctx.fillStyle = ai.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Player marker (bigger, with pulse)
+        const pSeg = segments[findSegment(player.z) % segments.length];
+        if (pSeg && pSeg.worldX != null) {
+            const p = W2S(pSeg.worldX, pSeg.worldY);
+            const pulse = 1 + Math.sin(performance.now() / 200) * 0.15;
+
+            // Glow
+            ctx.fillStyle = 'rgba(255, 0, 110, 0.3)';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 7 * pulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Dot
+            ctx.fillStyle = '#ff006e';
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Direction arrow (shows heading)
+            const h = pSeg.heading || 0;
+            const ax = p.x + Math.cos(h) * 8;
+            const ay = p.y - Math.sin(h) * 8;
+            ctx.strokeStyle = '#ff006e';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(ax, ay);
+            ctx.stroke();
+        }
+
+        // Progress bar (lap completion)
+        const prog = player.z / totalLength;
+        const barY = mmY + mmH - 8;
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fillRect(mmX + pad, barY, mmSize - pad * 2, 3);
+        ctx.fillStyle = '#00d4ff';
+        ctx.fillRect(mmX + pad, barY, (mmSize - pad * 2) * prog, 3);
+
+        ctx.restore();
+    }
+
+    function roundedRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+    }
+
+    // Traces a rounded rectangle in world coords by mapping to screen via W2S
+    function pathRoundedRect(ctx, wx, wy, ww, wh, wr, W2S) {
+        // Sample points along the rounded rectangle
+        const steps = 16; // points per corner arc
+        const right = wx + ww, top = wy + wh;
+        const pts = [];
+
+        // Start at top straight - left side near the corner
+        // Top-left corner arc: center (wx + wr, top - wr), from west to north
+        const tlC = { x: wx + wr, y: top - wr };
+        for (let i = 0; i <= steps; i++) {
+            const a = Math.PI + (i / steps) * (Math.PI / 2); // π to 3π/2 (west to south in screen, but in world up-flipped, that's top-left)
+            // Actually let's use standard: top-left corner spans from 90° (north) to 180° (west)
+            const ang = Math.PI / 2 + (i / steps) * (Math.PI / 2); // 90° to 180°
+            pts.push({ x: tlC.x + wr * Math.cos(ang), y: tlC.y + wr * Math.sin(ang) });
+        }
+        // Left side straight (going down)
+        pts.push({ x: wx, y: wy + wr });
+        // Bottom-left: center (wx + wr, wy + wr), from 180° to 270°
+        const blC = { x: wx + wr, y: wy + wr };
+        for (let i = 0; i <= steps; i++) {
+            const ang = Math.PI + (i / steps) * (Math.PI / 2);
+            pts.push({ x: blC.x + wr * Math.cos(ang), y: blC.y + wr * Math.sin(ang) });
+        }
+        // Bottom side
+        pts.push({ x: right - wr, y: wy });
+        // Bottom-right: center (right - wr, wy + wr), from 270° to 360°
+        const brC = { x: right - wr, y: wy + wr };
+        for (let i = 0; i <= steps; i++) {
+            const ang = 3 * Math.PI / 2 + (i / steps) * (Math.PI / 2);
+            pts.push({ x: brC.x + wr * Math.cos(ang), y: brC.y + wr * Math.sin(ang) });
+        }
+        // Right side
+        pts.push({ x: right, y: top - wr });
+        // Top-right: center (right - wr, top - wr), from 0 to 90°
+        const trC = { x: right - wr, y: top - wr };
+        for (let i = 0; i <= steps; i++) {
+            const ang = 0 + (i / steps) * (Math.PI / 2);
+            pts.push({ x: trC.x + wr * Math.cos(ang), y: trC.y + wr * Math.sin(ang) });
+        }
+        // Top side back to start
+        pts.push({ x: wx + wr, y: top });
+
+        // Draw path
+        for (let i = 0; i < pts.length; i++) {
+            const s = W2S(pts[i].x, pts[i].y);
+            if (i === 0) ctx.moveTo(s.x, s.y);
+            else ctx.lineTo(s.x, s.y);
+        }
+        ctx.closePath();
     }
 
     // Helpers
