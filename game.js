@@ -120,6 +120,25 @@
         document.getElementById('restart-btn').addEventListener('click', startGame);
         document.getElementById('menu-btn').addEventListener('click', goMenu);
         document.getElementById('pause-quit-btn').addEventListener('click', goMenu);
+
+        // Rules modal
+        const rulesModal = document.getElementById('rules-modal');
+        const openRules = () => rulesModal.classList.remove('hidden');
+        const closeRules = () => rulesModal.classList.add('hidden');
+        document.getElementById('rules-btn').addEventListener('click', openRules);
+        document.getElementById('ingame-rules-btn').addEventListener('click', openRules);
+        document.getElementById('rules-close').addEventListener('click', closeRules);
+        document.getElementById('rules-close-bottom').addEventListener('click', closeRules);
+        rulesModal.addEventListener('click', (e) => { if (e.target === rulesModal) closeRules(); });
+
+        // Toggle rules with R key
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyR') {
+                if (rulesModal.classList.contains('hidden')) openRules();
+                else closeRules();
+            }
+            if (e.code === 'Escape' && !rulesModal.classList.contains('hidden')) closeRules();
+        });
     }
 
     function showScreen(id) {

@@ -446,6 +446,203 @@ body {
     background: rgba(0, 0, 0, 0.6);
 }
 
+/* ===== RULES MODAL ===== */
+.action-row {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.5rem;
+}
+
+.rules-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    overflow-y: auto;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.rules-content {
+    position: relative;
+    max-width: 700px;
+    width: 100%;
+    background: linear-gradient(135deg, #0f0f25 0%, #1a0f35 50%, #0f1a35 100%);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 20px;
+    padding: 2.5rem 2rem;
+    box-shadow:
+        0 0 60px rgba(0, 212, 255, 0.15),
+        0 0 120px rgba(255, 0, 110, 0.1),
+        inset 0 0 40px rgba(255, 255, 255, 0.03);
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.rules-content::-webkit-scrollbar {
+    width: 8px;
+}
+.rules-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+.rules-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 212, 255, 0.3);
+    border-radius: 4px;
+}
+
+.rules-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.rules-close:hover {
+    background: rgba(255, 0, 110, 0.25);
+    border-color: #ff006e;
+    transform: rotate(90deg);
+}
+
+.rules-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    background: linear-gradient(90deg, #00d4ff, #ff006e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.3rem;
+    letter-spacing: 0.1rem;
+}
+
+.rules-subtitle {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.75rem;
+    color: #ffbe00;
+    letter-spacing: 0.25rem;
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+}
+
+.rules-intro {
+    background: rgba(255, 190, 0, 0.08);
+    border-left: 3px solid #ffbe00;
+    padding: 1rem 1.2rem;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 1.5rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.rules-section {
+    margin-bottom: 1.3rem;
+    padding: 1rem 1.2rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    transition: all 0.2s;
+}
+.rules-section:hover {
+    background: rgba(0, 212, 255, 0.05);
+    border-color: rgba(0, 212, 255, 0.2);
+}
+
+.rules-section h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.95rem;
+    color: #00d4ff;
+    margin-bottom: 0.7rem;
+    letter-spacing: 0.1rem;
+    text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+.rules-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.rules-section li {
+    position: relative;
+    padding: 0.35rem 0 0.35rem 1.5rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+.rules-section li::before {
+    content: '▸';
+    position: absolute;
+    left: 0.3rem;
+    color: #ff006e;
+    font-weight: bold;
+}
+.rules-section li strong {
+    color: #ffbe00;
+    font-weight: 700;
+}
+
+#rules-close-bottom {
+    display: block;
+    margin: 1.5rem auto 0;
+    padding: 0.8rem 2.5rem;
+    font-size: 1rem;
+}
+
+/* In-game rules button */
+.ingame-rules-btn {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    width: 44px;
+    height: 44px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(0, 212, 255, 0.4);
+    border-radius: 50%;
+    color: #fff;
+    font-size: 1.2rem;
+    cursor: pointer;
+    z-index: 15;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.ingame-rules-btn:hover {
+    background: rgba(0, 212, 255, 0.2);
+    border-color: #00d4ff;
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+    transform: scale(1.1);
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
     .game-title { font-size: 3rem; }
@@ -456,4 +653,8 @@ body {
     .hud-value { font-size: 1rem; }
     .speed-value { font-size: 1.8rem; }
     .results-grid { grid-template-columns: 1fr; }
+    .action-row { flex-direction: column; gap: 0.6rem; }
+    .rules-content { padding: 1.5rem 1.2rem; }
+    .rules-title { font-size: 1.4rem; }
+    .rules-section li { font-size: 0.85rem; }
 }

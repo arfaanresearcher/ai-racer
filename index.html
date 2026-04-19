@@ -49,14 +49,84 @@
                     </div>
                 </div>
 
-                <button id="start-btn" class="glow-btn">
-                    <span>START RACE</span>
-                    <div class="btn-glow"></div>
-                </button>
+                <div class="action-row">
+                    <button id="rules-btn" class="menu-btn">📋 PROJECT RULES</button>
+                    <button id="start-btn" class="glow-btn">
+                        <span>START RACE</span>
+                        <div class="btn-glow"></div>
+                    </button>
+                </div>
 
                 <div class="controls-hint">
-                    <p>🎮 Arrow Keys / WASD to drive &nbsp;|&nbsp; SPACE to boost &nbsp;|&nbsp; P to pause</p>
+                    <p>🎮 Arrow Keys / WASD to drive &nbsp;|&nbsp; SPACE to boost &nbsp;|&nbsp; P to pause &nbsp;|&nbsp; R to toggle rules</p>
                 </div>
+            </div>
+        </div>
+
+        <!-- Rules Modal -->
+        <div id="rules-modal" class="rules-modal hidden">
+            <div class="rules-content">
+                <button id="rules-close" class="rules-close">✕</button>
+                <h2 class="rules-title">📋 PROJECT BRIEF</h2>
+                <p class="rules-subtitle">PhD Students: Mini-Project 2 Requirements</p>
+
+                <div class="rules-intro">
+                    In this project, you will design and implement a simplified autonomous driving
+                    simulator that models vehicle motion and control within a structured track environment.
+                </div>
+
+                <div class="rules-section">
+                    <h3>▶ Simulator Development</h3>
+                    <ul>
+                        <li>Using <strong>VIBE Coding</strong>, develop a simple driving simulator in Python (you may use Panda3D).</li>
+                    </ul>
+                </div>
+
+                <div class="rules-section">
+                    <h3>▶ Track Design</h3>
+                    <ul>
+                        <li>Construct a track that is a <strong>rectangular loop with rounded corners</strong>.</li>
+                        <li>Ensure the track has outer dimensions of <strong>104 units in width</strong> and <strong>68 units in height</strong>.</li>
+                        <li>Form each corner using a <strong>quarter-circle arc of radius 14 units</strong>.</li>
+                        <li>Maintain a <strong>constant lane width of 12 units</strong>.</li>
+                    </ul>
+                </div>
+
+                <div class="rules-section">
+                    <h3>▶ Vehicle Motion</h3>
+                    <ul>
+                        <li>Model a vehicle moving on the predefined track.</li>
+                        <li>Ensure the vehicle moves forward at a <strong>constant speed</strong>.</li>
+                    </ul>
+                </div>
+
+                <div class="rules-section">
+                    <h3>▶ Camera and Software Structure</h3>
+                    <ul>
+                        <li>Include a <strong>first-person view</strong> of the vehicle.</li>
+                        <li>Expose the camera image through a <strong>callable routine</strong>.</li>
+                        <li>Keep keyboard listeners in the main file.</li>
+                    </ul>
+                </div>
+
+                <div class="rules-section">
+                    <h3>▶ Control System</h3>
+                    <ul>
+                        <li>Control steering using a <strong>PID controller</strong> to keep the vehicle centered within the lane.</li>
+                        <li>Compute steering commands based on the <strong>lateral deviation</strong> from the lane center.</li>
+                        <li>Ensure stable navigation along both <strong>straight and curved sections</strong> of the track.</li>
+                    </ul>
+                </div>
+
+                <div class="rules-section">
+                    <h3>▶ Requirement</h3>
+                    <ul>
+                        <li>Implement <strong>two simple lane-finding techniques</strong>.</li>
+                        <li><strong>Compare their performance</strong> and comment on the results.</li>
+                    </ul>
+                </div>
+
+                <button id="rules-close-bottom" class="glow-btn">GOT IT!</button>
             </div>
         </div>
 
@@ -116,6 +186,9 @@
                 <p>Press P to resume</p>
                 <button id="pause-quit-btn" class="menu-btn">QUIT TO MENU</button>
             </div>
+
+            <!-- In-game rules toggle -->
+            <button id="ingame-rules-btn" class="ingame-rules-btn" title="Show project rules (R)">📋</button>
         </div>
 
         <!-- Results Screen -->
